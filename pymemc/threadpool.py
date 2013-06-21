@@ -1,4 +1,4 @@
-import Queue
+import queue as Queue
 import logging
 import threading
 
@@ -26,7 +26,7 @@ class ThreadPool:
         self.tasks = Queue.Queue(num_threads)
         self.threads = []
 
-        for t in xrange(num_threads):
+        for t in range(num_threads):
             self.threads.append(Worker(self.tasks))
 
     def add_task(self, func, *args, **kargs):

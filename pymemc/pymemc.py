@@ -6,19 +6,23 @@ import pkg_resources
 import itertools
 import sys
 
+PY2 = sys.version_info[0] == 2
+if not PY2:
+    long = int
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle as pickle
 
-import chash
-import threadpool
-import connpool
+from pymemc import chash
+from pymemc import threadpool
+from pymemc import connpool
 
 # in general, raise an exception if an expected return value
 # is out of bounds but handle normal errors with true/false
 # and failure lists (this includes k/v oversize errors)
-from exc import MemcachedConnectionClosedError, MemcachedError
+from pymemc.exc import MemcachedConnectionClosedError, MemcachedError
 
 try:
     __version__ = pkg_resources.require("pymemc")[0].version
@@ -44,7 +48,7 @@ class F(object):
     Compression/Serialization Flags
     """
     _pickle = 1 << 0
-    _int = 1 << 1
+    _int = (1 << 1 if PY2 else 1 << 2)
     _long = 1 << 2
     _compressed = 1 << 3
 
@@ -217,10 +221,10 @@ def _id(opcode, key, opaque, expire, cas, delta, initial):
 # in the mean time I am chunking getQ packets into blocks of 1K
 # which prevents this from happening but slightly hurts performance
 def socksend(sock, lst):
-    sock.sendall(''.join(lst))
+    sock.sendall(b''.join(lst))
 
 def sockrecv(sock, num_bytes):
-    d = ''
+    d = b''
     while len(d) < num_bytes:
         c = sock.recv(min(8192, num_bytes - len(d)))
         if not c:
@@ -262,7 +266,7 @@ class Client(object):
                  decompress_fn=None,
                  max_threads=None,
                  ch_replicas=100,
-                 default_encoding="utf-8",
+                 default_encoding=None,
                  max_value_size=1048576,
                  connect_timeout_seconds=1):
         """
@@ -284,12 +288,12 @@ class Client(object):
         # if max threads is not specified, we'll use one per host
         self.threadpool = threadpool.ThreadPool(max_threads or len(host_list))
         self.hash = chash.ConsistentHash(replicas=ch_replicas)
-        self.default_encoding = default_encoding
+        self.default_encoding = default_encoding or "utf-8"
         self.max_value_size = max_value_size
         # maintain a separate pool of connections for each host
         for host_str in host_list:
             pool = connpool.SocketConnectionPool(self._parse_host(host_str), connect_timeout_seconds)
-            self.hash.add_node(pool)
+            self.hash.add_node(pool, self.default_encoding)
 
     @contextlib.contextmanager
     def sock4key(self, key):
@@ -306,7 +310,7 @@ class Client(object):
         return (host, int(port))
 
     def _encode_key(self, key):
-        if self.default_encoding:
+        if not isinstance(key, bytes):
             key = key.encode(self.default_encoding)
         # if len(key) > MAX_KEY_SIZE:
             # raise MemcachedError("%d: Key Too Large" % (R._key_too_large,))
@@ -332,14 +336,17 @@ class Client(object):
 
     def _serialize(self, value):
         flags = 0
-        if isinstance(value, str):
+        if isinstance(value, bytes):
             pass
+        elif isinstance(value, bool):
+            flags |= F._pickle
+            value = self._encode(value)
         elif isinstance(value, int):
             flags |= F._int
-            value = str(value)
+            value = bytes(str(value).encode(self.default_encoding))
         elif isinstance(value, long):
             flags |= F._long
-            value = str(value)
+            value = bytes(str(value).encode(self.default_encoding))
         else:
             flags |= F._pickle
             value = self._encode(value)
@@ -462,7 +469,7 @@ class Client(object):
         items = kv_map.items()
         last_index = len(items)-1
 
-        with self.sock4key(hashkey or kv_map.keys()[0]) as sock:
+        with self.sock4key(hashkey or tuple(kv_map.keys())[0]) as sock:
             for i,(key,val) in enumerate(items):
                 if serialize:
                     flags, val = self._serialize(val)
@@ -479,7 +486,7 @@ class Client(object):
                         cas, extra) = sockresponse(sock)
                 if status != R._no_error:
                     if failure_test(status):
-                        failure_list.append(kv_map.keys()[opaque])
+                        failure_list.append(tuple(kv_map.keys())[opaque])
                     else:
                         raise MemcachedError("%d: %s" % (status, extra))
                 if opaque == last_index: # last item!

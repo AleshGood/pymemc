@@ -1,1 +1,1 @@
-from pymemc import *
+from pymemc.pymemc import *

@@ -1,5 +1,10 @@
 import hashlib
 import bisect
+import sys
+
+PY2 = sys.version_info[0] == 2
+if not PY2:
+    long = int
 
 class ConsistentHash(object):
     def __init__(self, replicas=10):
@@ -15,9 +20,9 @@ class ConsistentHash(object):
         m = hashlib.md5(key)
         return long(m.hexdigest(), 16)
 
-    def add_node(self, node):
-        for i in xrange(self.replicas):
-            key = self.hashkey("%s:%i" % (node,i))
+    def add_node(self, node, encoding):
+        for i in range(self.replicas):
+            key = self.hashkey(("%s:%i" % (node,i)).encode(encoding))
             self.ring[key] = node
             self.sorted_keys.append(key)
         self.sorted_keys.sort()

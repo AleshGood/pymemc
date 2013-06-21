@@ -1,10 +1,10 @@
-import Queue
+import queue as Queue
 import socket
 import contextlib
 import functools
 import logging
 
-import exc
+from pymemc import exc
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def instance_reconnect(method):
         while retries:
             try:
                 return method(self, *args, **kwargs)
-            except (exc.MemcachedConnectionClosedError, socket.error), e:
+            except (exc.MemcachedConnectionClosedError, socket.error) as e:
                 logger.warning("Stale connection, retry %i...", retries)
                 retries -= 1
                 if not retries:

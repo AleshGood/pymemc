@@ -40,8 +40,8 @@ class BaseTest(unittest.TestCase):
          return base64.urlsafe_b64encode(os.urandom(length))
 
     def get_sample_data(self, length=100):
-        keys = (self.random_str(5) for i in xrange(length))
-        vals = (self.random_str(100) for i in xrange(length))
+        keys = (self.random_str(5) for i in range(length))
+        vals = (self.random_str(100) for i in range(length))
         sample_data = dict(zip(keys, vals))
         return sample_data
 
@@ -55,7 +55,7 @@ class TestQuitNoop(BaseTest):
 
     def testNoop(self):
         """test that noop is a... no-op?"""
-        for i in xrange(100):
+        for i in range(100):
             assert self.client.noop() == True
 
 class TestGetSetDelete(BaseTest):
@@ -63,21 +63,21 @@ class TestGetSetDelete(BaseTest):
         """test simple gets and sets"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.set(key, val) == True
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key)
 
     def testGetSetMissingValues(self):
         """test simple gets and sets with missing values"""
         sample_data = self.get_sample_data()
 
-        for i, (key, val) in enumerate(sample_data.iteritems()):
+        for i, (key, val) in enumerate(sample_data.items()):
             if (i % 2) == 0:
                 assert self.client.set(key, val) == True
 
-        for i, (key, val) in enumerate(sample_data.iteritems()):
+        for i, (key, val) in enumerate(sample_data.items()):
             if (i % 2) == 0:
                 assert sample_data[key] == self.client.get(key)
             else:
@@ -103,39 +103,39 @@ class TestGetSetDelete(BaseTest):
         """test setting, getting, deleting"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             self.client.set(key,val)
 
-        for key,val in sample_data.iteritems():
+        for key,val in sample_data.items():
             assert self.client.get(key) == val
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert self.client.delete(key) == True
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert self.client.delete(key) == False
 
-        for key,val in sample_data.iteritems():
+        for key,val in sample_data.items():
             assert self.client.get(key) == None
 
     def testGetRetry(self):
         """test that a simple get succeeds even after the server has gone away"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.set(key, val) == True
         
         self.mc.kill()
         self.mc = subprocess.Popen(['memcached'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         time.sleep(1)
         
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert self.client.get(key) == None
             
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.set(key, val) == True
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key)
 
 class TestAddReplace(BaseTest):
@@ -143,38 +143,38 @@ class TestAddReplace(BaseTest):
         """test basic adds"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.add(key, val) == True
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key)
 
     def testAddGetExisting(self):
         """test adds with existing keys"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.set(key, val) == True
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             reversed_val = val[::-1]
             assert self.client.add(key, reversed_val) == False
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key)
 
     def testReplaceGet(self):
         """test basic replaces"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.set(key, val) == True
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             reversed_val = val[::-1]
             assert self.client.replace(key, reversed_val) == True
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             reversed_val = val[::-1]
             assert reversed_val == self.client.get(key)
 
@@ -182,24 +182,24 @@ class TestAddReplace(BaseTest):
         """test replace with missing keys"""
         sample_data = self.get_sample_data(length=100)
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert self.client.replace(key, val) == False
 
 class TestIncrementDecrement(BaseTest):
     def testIncrement(self):
         """test basic increment"""
-        int_sample_data = dict(zip(map(str, xrange(100)), xrange(100)))
+        int_sample_data = dict(zip(map(str, range(100)), range(100)))
         random_delta = random.randint(1,10)
-        for key,intval in int_sample_data.iteritems():
+        for key,intval in int_sample_data.items():
             assert self.client.incr(key, initial=intval) == intval
             assert self.client.incr(key) == intval+1
             assert self.client.incr(key, delta=random_delta) == intval+1+random_delta
 
     def testDecrement(self):
         """test basic decrement"""
-        int_sample_data = dict(zip(map(str, xrange(100,200)), xrange(100,200)))
+        int_sample_data = dict(zip(map(str, range(100,200)), range(100,200)))
         random_delta = random.randint(1,10)
-        for key,intval in int_sample_data.iteritems():
+        for key,intval in int_sample_data.items():
             assert self.client.set(key, intval) == True
             assert self.client.decr(key) == intval-1
             assert self.client.decr(key, delta=random_delta) == intval-1-random_delta
@@ -211,7 +211,7 @@ class TestMultiGetSetDelete(BaseTest):
 
         assert self.client.set_multi(sample_data) == []
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key)
 
     def testGetMulti(self):
@@ -219,52 +219,52 @@ class TestMultiGetSetDelete(BaseTest):
         sample_data = self.get_sample_data(length=100)
         assert self.client.set_multi(sample_data) == []
 
-        return_data = self.client.get_multi(sample_data.iterkeys())
+        return_data = self.client.get_multi(sample_data.keys())
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == return_data[key]
 
     def testGetSetMultiFuckTon(self):
         """test multigets and multisets with many values"""
         sample_data = self.get_sample_data(length=50000)
         assert self.client.set_multi(sample_data) == []
-        rdata = self.client.get_multi(sample_data.iterkeys())
-        for key in sample_data.iterkeys():
+        rdata = self.client.get_multi(sample_data.keys())
+        for key in sample_data.keys():
             assert sample_data[key] == self.client.get(key) == rdata[key]
 
     def testGetMultiMissing(self):
         """test multigets with missing values"""
         sample_data = self.get_sample_data(length=100)
-        assert self.client.get_multi(sample_data.iterkeys()) == {}
+        assert self.client.get_multi(sample_data.keys()) == {}
 
     def testDeleteMulti(self):
         """test simple multideletes"""
         sample_data = self.get_sample_data(length=100)
         assert self.client.set_multi(sample_data) == []
 
-        return_data = self.client.get_multi(sample_data.iterkeys())
+        return_data = self.client.get_multi(sample_data.keys())
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == return_data[key]
 
-        assert self.client.delete_multi(sample_data.iterkeys()) == []
+        assert self.client.delete_multi(sample_data.keys()) == []
 
     def testMultiHashKey(self):
         """test hashkey multi-ops"""
         sample_data = self.get_sample_data(length=100)
         assert self.client.set_multi(sample_data, hashkey='test') == []
 
-        return_data = self.client.get_multi(sample_data.iterkeys(), hashkey='test')
+        return_data = self.client.get_multi(sample_data.keys(), hashkey='test')
 
-        for key in sample_data.iterkeys():
+        for key in sample_data.keys():
             assert sample_data[key] == return_data[key]
 
-        assert self.client.delete_multi(sample_data.iterkeys(), hashkey='test') == []
+        assert self.client.delete_multi(sample_data.keys(), hashkey='test') == []
 
     def testDeleteMultiMissing(self):
         """test multideletes with missing values"""
         sample_data = self.get_sample_data(length=100)
-        assert set(self.client.delete_multi(sample_data.iterkeys())) == set(sample_data.iterkeys())
+        assert set(self.client.delete_multi(sample_data.keys())) == set(sample_data.keys())
 
     def testSetOversizeValue(self):
         """test multisets with oversized values"""
@@ -287,7 +287,7 @@ class TestMultiGetSetDelete(BaseTest):
         assert self.client.set_multi(sample_data) == []
 
         rval = self.client.get_multi(sample_data.keys())
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             assert rval[key] == val
 
     def testMultiSetRetry(self):
@@ -302,7 +302,7 @@ class TestMultiGetSetDelete(BaseTest):
         sample_data = self.get_sample_data(length=100)
         assert self.client.set_multi(sample_data) == []
 
-        for key, val in sample_data.iteritems():
+        for key, val in sample_data.items():
             rval = self.client.get(key)
             assert rval == val, "rval:"+str(rval)
 
@@ -314,19 +314,19 @@ class TestMultiAddReplace(BaseTest):
         assert self.client.set_multi(sample_data) == []
 
         rmap = dict(sample_data)
-        for key,val in rmap.iteritems():
+        for key,val in rmap.items():
             rmap[key] = val[::-1]
 
         assert self.client.replace_multi(rmap) == []
 
-        for key in rmap.iterkeys():
+        for key in rmap.keys():
             assert rmap[key] == self.client.get(key)
 
     def testReplaceMultiMissing(self):
         """test multireplaces with missing values"""
         sample_data = self.get_sample_data(length=100)
 
-        assert set(self.client.replace_multi(sample_data)) == set(sample_data.iterkeys())
+        assert set(self.client.replace_multi(sample_data)) == set(sample_data.keys())
 
     def testAddMulti(self):
         """test simple multiadds"""
@@ -334,7 +334,7 @@ class TestMultiAddReplace(BaseTest):
 
         assert self.client.add_multi(sample_data) == []
 
-        for key,val in sample_data.iteritems():
+        for key,val in sample_data.items():
             assert self.client.get(key) == val
 
     def testAddMultiExisting(self):
@@ -342,7 +342,7 @@ class TestMultiAddReplace(BaseTest):
         sample_data = self.get_sample_data(length=100)
 
         assert self.client.add_multi(sample_data) == []
-        assert set(self.client.add_multi(sample_data)) == set(sample_data.iterkeys())
+        assert set(self.client.add_multi(sample_data)) == set(sample_data.keys())
 
 
 # test complex objects

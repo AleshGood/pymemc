@@ -27,7 +27,7 @@ def main():
         cmd = cmd % ""
     
     procs = []
-    for i in xrange(num_procs):
+    for i in range(num_procs):
         args = shlex.split(cmd) + [str(start_port+i)]
         print " ".join(args)
         p = subprocess.Popen(args)
